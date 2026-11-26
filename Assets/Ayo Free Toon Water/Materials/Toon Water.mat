@@ -141,9 +141,9 @@ Material:
     - _Surface_Receive_Shadows: 1
     - _Voronoi_Density: 35
     - _Water_Depth_Distance: 0.5
-    - _Wave_Scale: 0.02
+    - _Wave_Scale: 0
     - _Wave_Speed: 0.01
-    - _Wave_Strength: 0.117
+    - _Wave_Strength: 0.031
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:

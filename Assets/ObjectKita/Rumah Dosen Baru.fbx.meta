@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: c21a86c8ff7295c478dbdc13a7a7adf7
+guid: 4c3297c470df5d0408bfc74240f5b2ca
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -108,10 +108,3 @@ ModelImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 399176
-  packageName: Cavitoon - Toon Cavity, Screen Space Curvature & Contours Shader Lite
-  packageVersion: 1.0
-  assetPath: Assets/Cavitoon/Models/DemoScene.fbx
-  uploadId: 970236

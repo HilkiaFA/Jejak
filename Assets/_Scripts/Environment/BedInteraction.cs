@@ -8,7 +8,6 @@ namespace Jejak.Environment
     public class BedInteraction : MonoBehaviour
     {
         [Header("Syarat Tidur")]
-        [Tooltip("Jembatan masa lalu harus selesai sebelum karakter bisa tidur untuk bangun di masa depan")]
         [SerializeField] private BridgeConstruction bridgeConstruction;
 
         private bool isPlayerNearby = false;

@@ -7,7 +7,7 @@ namespace Jejak.Traffic
         [Header("Movement")]
         public float speed = 8.0f;
         [SerializeField] private float rayDistance = 4.0f;
-        [SerializeField] private LayerMask obstacleLayer = ~0; 
+        [SerializeField] private LayerMask obstacleLayer = ~0;
 
         [Header("Lifetime")]
         [SerializeField] private float lifeTime = 25.0f;
@@ -19,7 +19,7 @@ namespace Jejak.Traffic
             rb = GetComponent<Rigidbody>();
             if (rb != null)
             {
-                rb.isKinematic = true; 
+                rb.isKinematic = true;
             }
             Destroy(gameObject, lifeTime);
         }

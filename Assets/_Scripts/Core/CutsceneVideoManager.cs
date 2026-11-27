@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Video;
 using UnityEngine.InputSystem;
 using Jejak.Gameplay1;
+using Jejak.Gameplay2;
 
 namespace Jejak.Core
 {
@@ -10,40 +11,37 @@ namespace Jejak.Core
     {
         public static CutsceneVideoManager Instance { get; private set; }
 
+        public enum ActiveVideo
+        {
+            None,
+            IntroVideo,
+            OutroVideo
+        }
+
         [Header("Video Player & UI")]
         [SerializeField] private VideoPlayer videoPlayer;
-        [Tooltip("UI Canvas atau Panel tempat Video ditampilkan (RawImage)")]
         [SerializeField] private GameObject videoScreenUI;
 
         [Header("Video Clips")]
-        [Tooltip("Video 1: Dosen bangun, kerja ke kampus, pulang lihat jembatan rusak, lalu tidur")]
         [SerializeField] private VideoClip introVideoClip;
 
-        [Tooltip("Video 2: Bangun di masa kini, jembatan sudah kokoh, tapi melihat hutan gundul")]
         [SerializeField] private VideoClip outroVideoClip;
 
-        [Header("Gameplay Objects")]
-        [Tooltip("GameObject Player di masa lalu")]
+        [Header("Gameplay Objects & Groups")]
         [SerializeField] private GameObject playerObject;
-
-        [Tooltip("Lingkungan Masa Lalu (Desa kuno, sungai, jembatan, NPC)")]
         [SerializeField] private GameObject pastWorldGroup;
+        [SerializeField] private GameObject gameplay1Group;
+        [SerializeField] private GameObject gameplay2Group;
 
         [Header("Skip Settings")]
         [SerializeField] private bool allowSkip = true;
 
-        private bool isVideoPlaying = false;
+        private ActiveVideo currentActiveVideo = ActiveVideo.None;
 
         private void Awake()
         {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Destroy(gameObject);
-            }
+            if (Instance == null) Instance = this;
+            else Destroy(gameObject);
         }
 
         private void Start()
@@ -53,37 +51,44 @@ namespace Jejak.Core
 
         private void Update()
         {
-            if (isVideoPlaying && allowSkip)
+            if (currentActiveVideo != ActiveVideo.None && allowSkip)
             {
                 var keyboard = Keyboard.current;
                 if (keyboard != null && (keyboard.spaceKey.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame))
                 {
                     Debug.Log("<color=yellow>[Cutscene] Video dilewati (Skip)!</color>");
-                    FinishIntroVideo();
+                    if (currentActiveVideo == ActiveVideo.IntroVideo)
+                    {
+                        FinishIntroVideo();
+                    }
+                    else if (currentActiveVideo == ActiveVideo.OutroVideo)
+                    {
+                        FinishOutroVideo();
+                    }
                 }
             }
         }
 
-        
         public void PlayIntroCutscene()
         {
+            currentActiveVideo = ActiveVideo.IntroVideo;
+
             if (playerObject != null) playerObject.SetActive(false);
             if (pastWorldGroup != null) pastWorldGroup.SetActive(false);
 
             if (videoPlayer != null && introVideoClip != null)
             {
-                isVideoPlaying = true;
                 if (videoScreenUI != null) videoScreenUI.SetActive(true);
 
                 videoPlayer.clip = introVideoClip;
                 videoPlayer.loopPointReached += OnIntroVideoFinished;
                 videoPlayer.Play();
-                Debug.Log("<color=cyan>[Cutscene] Memutar Video Intro Era Modern...</color>");
+                Debug.Log("<color=cyan>[Cutscene] Memutar Video 1 (Intro Bagian B)...</color>");
             }
             else
             {
-                Debug.LogWarning("[Cutscene] File Video Intro belum dipasang! Langsung memulai gameplay Masa Lalu.");
-                StartPastGameplay();
+                Debug.LogWarning("[Cutscene] File Video 1 belum dipasang. Langsung memulai GAMEPLAY 1.");
+                FinishIntroVideo();
             }
         }
 
@@ -95,66 +100,85 @@ namespace Jejak.Core
 
         private void FinishIntroVideo()
         {
-            isVideoPlaying = false;
-            if (videoPlayer != null && videoPlayer.isPlaying)
-            {
-                videoPlayer.Stop();
-            }
+            currentActiveVideo = ActiveVideo.None;
+            if (videoPlayer != null && videoPlayer.isPlaying) videoPlayer.Stop();
+            if (videoScreenUI != null) videoScreenUI.SetActive(false);
 
-            if (videoScreenUI != null)
-            {
-                videoScreenUI.SetActive(false);
-            }
-
-            StartPastGameplay();
+            StartPastGameplay1();
         }
 
-
-        public void StartPastGameplay()
+        public void StartPastGameplay1()
         {
             if (pastWorldGroup != null) pastWorldGroup.SetActive(true);
             if (playerObject != null) playerObject.SetActive(true);
+            if (gameplay1Group != null) gameplay1Group.SetActive(true);
+            if (gameplay2Group != null) gameplay2Group.SetActive(false);
 
             Debug.Log("<color=green>[Gameplay] Karakter terbangun di MASA LALU! Memulai Gameplay 1.</color>");
 
             if (Gameplay1Manager.Instance != null)
             {
+                Gameplay1Manager.Instance.gameObject.SetActive(true);
                 Gameplay1Manager.Instance.StartGameplay1();
             }
         }
 
-
         public void PlayOutroCutscene()
         {
+            currentActiveVideo = ActiveVideo.OutroVideo;
+
             if (playerObject != null) playerObject.SetActive(false);
             if (pastWorldGroup != null) pastWorldGroup.SetActive(false);
 
             if (videoPlayer != null && outroVideoClip != null)
             {
-                isVideoPlaying = true;
                 if (videoScreenUI != null) videoScreenUI.SetActive(true);
 
                 videoPlayer.clip = outroVideoClip;
                 videoPlayer.loopPointReached += OnOutroFinished;
                 videoPlayer.Play();
-                Debug.Log("<color=cyan>[Cutscene] Memutar Video Bagian D: The Consequence (Dampak di Masa Depan)...</color>");
+                Debug.Log("<color=cyan>[Cutscene] Memutar Video 2: Bagian D (The Consequence)...</color>");
             }
             else
             {
-                Debug.Log("<color=green>[Gameplay 1 SELESAI] File Video Bagian D (The Consequence) belum dipasang di Inspector. Target 100 Balok Berhasil Tercapai!</color>");
+                Debug.LogWarning("[Cutscene] File Video 2 belum dipasang. Langsung beralih ke GAMEPLAY 2.");
+                FinishOutroVideo();
             }
         }
 
         private void OnOutroFinished(VideoPlayer source)
         {
             videoPlayer.loopPointReached -= OnOutroFinished;
-            isVideoPlaying = false;
-            Debug.Log("<color=yellow>[Cutscene] Video Outro Selesai. Babak 1 Selesai!</color>");
+            FinishOutroVideo();
+        }
+
+        public void FinishOutroVideo()
+        {
+            currentActiveVideo = ActiveVideo.None;
+            if (videoPlayer != null && videoPlayer.isPlaying) videoPlayer.Stop();
+            if (videoScreenUI != null) videoScreenUI.SetActive(false);
+
+            Debug.Log("<color=yellow>[Cutscene] Video 2 Selesai. Memulai GAMEPLAY 2 (Gotong Royong & Pelestarian)!</color>");
+
+            if (Gameplay1Manager.Instance != null)
+            {
+                Gameplay1Manager.Instance.gameObject.SetActive(false);
+            }
+            if (gameplay1Group != null) gameplay1Group.SetActive(false);
+            if (gameplay2Group != null) gameplay2Group.SetActive(true);
+
+            if (playerObject != null) playerObject.SetActive(true);
+            if (pastWorldGroup != null) pastWorldGroup.SetActive(true);
+
+            if (Gameplay2Manager.Instance != null)
+            {
+                Gameplay2Manager.Instance.StartGameplay2();
+            }
         }
 
         private void OnGUI()
         {
-            if (isVideoPlaying && allowSkip)
+            if (currentActiveVideo != ActiveVideo.None && allowSkip)
             {
                 GUI.Label(new Rect(Screen.width - 220, Screen.height - 40, 200, 30), "Tekan [SPACE] untuk Skip Video");
             }

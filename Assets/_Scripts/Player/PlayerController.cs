@@ -21,9 +21,36 @@ namespace Jejak.Player
             mainCamera = Camera.main;
         }
 
+        private void OnEnable()
+        {
+            ResetVelocity();
+        }
+
+        public void ResetVelocity()
+        {
+            velocity = Vector3.zero;
+        }
+
         private void Update()
         {
             HandleMovement();
+
+            if (transform.position.y < -4f)
+            {
+                characterController.enabled = false;
+                GameObject cp = GameObject.Find("Checkpoint");
+                if (cp != null)
+                {
+                    transform.position = cp.transform.position + Vector3.up * 1.5f;
+                }
+                else
+                {
+                    transform.position = new Vector3(0, 1.5f, 0);
+                }
+                ResetVelocity();
+                characterController.enabled = true;
+                Debug.LogWarning("[PlayerController] Karakter jatuh ke void! Otomatis dikembalikan ke atas lantai.");
+            }
         }
 
         private void HandleMovement()

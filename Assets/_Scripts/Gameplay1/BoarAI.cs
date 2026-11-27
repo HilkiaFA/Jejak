@@ -4,10 +4,10 @@ namespace Jejak.Gameplay1
 {
     public enum BoarState
     {
-        Guarding,  
-        Chasing,   
-        Invading,  
-        Returning  
+        Guarding,
+        Chasing,
+        Invading,
+        Returning
     }
 
     public class BoarAI : MonoBehaviour
@@ -20,9 +20,7 @@ namespace Jejak.Gameplay1
         [SerializeField] private float attackRange = 1.2f;
 
         [Header("Positions")]
-        [Tooltip("Posisi sarang babi hutan di Unsafe Zone")]
         [SerializeField] private Transform nestTransform;
-        [Tooltip("Posisi tujuan saat menyerbu Safe Zone pada Fase 2")]
         [SerializeField] private Transform invasionTargetPoint;
 
         private Transform playerTransform;
@@ -146,7 +144,7 @@ namespace Jejak.Gameplay1
         private void MoveTowardsTarget(Vector3 targetPos, float speed)
         {
             Vector3 direction = (targetPos - transform.position);
-            direction.y = 0; 
+            direction.y = 0;
 
             if (direction.magnitude > 0.2f)
             {
@@ -160,7 +158,7 @@ namespace Jejak.Gameplay1
         {
             if (Gameplay1Manager.Instance != null && Gameplay1Manager.Instance.IsPlayerInCheckpoint)
             {
-                return; 
+                return;
             }
 
             Debug.Log("<color=red>[Babi Hutan] Menyeruduk MC!</color>");

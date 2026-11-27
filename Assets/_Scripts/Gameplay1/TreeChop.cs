@@ -10,7 +10,6 @@ namespace Jejak.Gameplay1
         [SerializeField] private int maxChops = 3;
         [SerializeField] private int woodReward = 10;
         [SerializeField] private float chopCooldown = 0.4f;
-        [Tooltip("Jarak deteksi pemain ke pohon (dalam meter)")]
         [SerializeField] private float interactDistance = 2.5f;
 
         [Header("Visuals (Optional)")]

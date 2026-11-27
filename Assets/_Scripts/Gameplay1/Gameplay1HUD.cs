@@ -72,10 +72,10 @@ namespace Jejak.Gameplay1
                 Color oldColor = GUI.color;
                 GUI.color = new Color(1f, 0f, 0f, redBorderAlpha);
                 int borderWidth = 24;
-                GUI.DrawTexture(new Rect(0, 0, Screen.width, borderWidth), Texture2D.whiteTexture); 
-                GUI.DrawTexture(new Rect(0, Screen.height - borderWidth, Screen.width, borderWidth), Texture2D.whiteTexture); 
-                GUI.DrawTexture(new Rect(0, 0, borderWidth, Screen.height), Texture2D.whiteTexture); 
-                GUI.DrawTexture(new Rect(Screen.width - borderWidth, 0, borderWidth, Screen.height), Texture2D.whiteTexture); 
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, borderWidth), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(0, Screen.height - borderWidth, Screen.width, borderWidth), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(0, 0, borderWidth, Screen.height), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(Screen.width - borderWidth, 0, borderWidth, Screen.height), Texture2D.whiteTexture);
                 GUI.color = oldColor;
             }
 
@@ -95,20 +95,20 @@ namespace Jejak.Gameplay1
 
             GUILayout.BeginArea(new Rect(20, 20, 260, 110), hudBoxStyle);
             GUILayout.Space(6);
-            GUILayout.Label($"   Balok Kayu : <b>{wood} / {targetWood}</b>");
-            
+            GUILayout.Label($"Balok Kayu : <b>{wood} / {targetWood}</b>");
+
             if (Gameplay1Manager.Instance.CurrentPhase == GameplayPhase.Phase2_Invasion)
             {
                 GUI.color = Color.red;
-                GUILayout.Label($"   INVASI : <b>{timeString}</b>");
+                GUILayout.Label($"INVASI : <b>{timeString}</b>");
                 GUI.color = Color.white;
             }
             else
             {
-                GUILayout.Label($"   Waktu Aman : <b>{timeString}</b>");
+                GUILayout.Label($"Waktu Aman : <b>{timeString}</b>");
             }
 
-            GUILayout.Label($"   Siklus Ke : <b>{cycle}</b>");
+            GUILayout.Label($"Siklus Ke : <b>{cycle}</b>");
             GUILayout.EndArea();
 
             if (!string.IsNullOrEmpty(bannerMessage))
@@ -119,7 +119,7 @@ namespace Jejak.Gameplay1
                 bannerStyle.alignment = TextAnchor.MiddleCenter;
 
                 GUI.color = (Gameplay1Manager.Instance.CurrentPhase == GameplayPhase.Phase2_Invasion) ? Color.red : Color.yellow;
-                GUI.Box(new Rect(Screen.width / 2 - 250, 40, 500, 60), bannerMessage, bannerStyle);
+                GUI.Box(new Rect(Screen.width / 2 - 270, 40, 540, 60), bannerMessage, bannerStyle);
                 GUI.color = Color.white;
             }
 
@@ -127,21 +127,37 @@ namespace Jejak.Gameplay1
             if (Gameplay1Manager.Instance.IsPlayerInCheckpoint)
             {
                 GUI.color = Color.green;
-                zoneStatus = " Posisi: DI DALAM CHECKPOINT (AMAN)";
+                zoneStatus = "Posisi: DI DALAM CHECKPOINT (AMAN)";
             }
             else if (Gameplay1Manager.Instance.IsPlayerInUnsafeZone)
             {
                 GUI.color = Color.red;
-                zoneStatus = " Posisi: UNSAFE ZONE (BAHAYA!)";
+                zoneStatus = "Posisi: UNSAFE ZONE (BAHAYA!)";
             }
             else
             {
                 GUI.color = Color.white;
-                zoneStatus = " Posisi: SAFE ZONE (HUTAN AMAN)";
+                zoneStatus = "Posisi: SAFE ZONE (HUTAN AMAN)";
             }
 
             GUI.Label(new Rect(Screen.width - 320, 20, 300, 30), zoneStatus);
             GUI.color = Color.white;
+
+            if (wood >= targetWood)
+            {
+                GUIStyle pStyle = new GUIStyle(GUI.skin.box);
+                pStyle.fontSize = 16;
+                pStyle.fontStyle = FontStyle.Bold;
+                pStyle.alignment = TextAnchor.MiddleCenter;
+                GUI.color = Color.green;
+
+                string prompt = Gameplay1Manager.Instance.IsPlayerInCheckpoint
+                    ? "[TEKAN E] Selesaikan Gameplay 1 & Putar Video Dampak Masa Depan!"
+                    : "100 BALOK TERCAPAI! Lari masuk ke Checkpoint (Kotak Kuning)!";
+
+                GUI.Box(new Rect(Screen.width / 2 - 275, Screen.height - 80, 550, 45), prompt, pStyle);
+                GUI.color = Color.white;
+            }
         }
     }
 }

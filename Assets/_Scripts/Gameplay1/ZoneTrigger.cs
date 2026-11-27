@@ -1,4 +1,5 @@
 using UnityEngine;
+using Jejak.Gameplay2;
 
 namespace Jejak.Gameplay1
 {
@@ -16,34 +17,50 @@ namespace Jejak.Gameplay1
 
         private void OnTriggerEnter(Collider other)
         {
-            if (other.CompareTag("Player") && Gameplay1Manager.Instance != null)
+            if (other.CompareTag("Player"))
             {
-                switch (zoneType)
+                if (Gameplay1Manager.Instance != null)
                 {
-                    case ZoneType.UnsafeZone:
-                        Gameplay1Manager.Instance.SetPlayerInUnsafeZone(true);
-                        break;
-                    case ZoneType.Checkpoint:
-                        Gameplay1Manager.Instance.SetPlayerInCheckpoint(true);
-                        break;
-                    case ZoneType.SafeZone:
-                        break;
+                    switch (zoneType)
+                    {
+                        case ZoneType.UnsafeZone:
+                            Gameplay1Manager.Instance.SetPlayerInUnsafeZone(true);
+                            break;
+                        case ZoneType.Checkpoint:
+                            Gameplay1Manager.Instance.SetPlayerInCheckpoint(true);
+                            break;
+                        case ZoneType.SafeZone:
+                            break;
+                    }
+                }
+
+                if (Gameplay2Manager.Instance != null && zoneType == ZoneType.Checkpoint)
+                {
+                    Gameplay2Manager.Instance.isPlayerInCheckpoint = true;
                 }
             }
         }
 
         private void OnTriggerExit(Collider other)
         {
-            if (other.CompareTag("Player") && Gameplay1Manager.Instance != null)
+            if (other.CompareTag("Player"))
             {
-                switch (zoneType)
+                if (Gameplay1Manager.Instance != null)
                 {
-                    case ZoneType.UnsafeZone:
-                        Gameplay1Manager.Instance.SetPlayerInUnsafeZone(false);
-                        break;
-                    case ZoneType.Checkpoint:
-                        Gameplay1Manager.Instance.SetPlayerInCheckpoint(false);
-                        break;
+                    switch (zoneType)
+                    {
+                        case ZoneType.UnsafeZone:
+                            Gameplay1Manager.Instance.SetPlayerInUnsafeZone(false);
+                            break;
+                        case ZoneType.Checkpoint:
+                            Gameplay1Manager.Instance.SetPlayerInCheckpoint(false);
+                            break;
+                    }
+                }
+
+                if (Gameplay2Manager.Instance != null && zoneType == ZoneType.Checkpoint)
+                {
+                    Gameplay2Manager.Instance.isPlayerInCheckpoint = false;
                 }
             }
         }

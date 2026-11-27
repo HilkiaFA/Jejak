@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Jejak.Core;
 
 namespace Jejak.Gameplay1
@@ -8,10 +9,10 @@ namespace Jejak.Gameplay1
     public enum GameplayPhase
     {
         VideoIntro,
-        Phase1_SafeForest,     
-        Phase2_Invasion,       
-        CycleTransition,       
-        GameplayFinished       
+        Phase1_SafeForest,
+        Phase2_Invasion,
+        CycleTransition,
+        GameplayFinished
     }
 
     public class Gameplay1Manager : MonoBehaviour
@@ -25,10 +26,8 @@ namespace Jejak.Gameplay1
         public int TargetWood => targetWood;
 
         [Header("Timer Settings")]
-        [Tooltip("Durasi Fase 1 (Hutan Aman) dalam detik. Sesuai brief: 3 menit (180 detik)")]
         [SerializeField] private float phase1Duration = 180.0f;
 
-        [Tooltip("Durasi Fase 2 (Invasi Babi) dalam detik. Sesuai brief: 30 detik")]
         [SerializeField] private float phase2Duration = 30.0f;
 
         private float remainingTime = 0f;
@@ -71,6 +70,25 @@ namespace Jejak.Gameplay1
 
         private void Start()
         {
+            FindReferences();
+
+            if (CutsceneVideoManager.Instance == null)
+            {
+                StartGameplay1();
+            }
+        }
+
+        private void FindReferences()
+        {
+            if (checkpointPoint == null)
+            {
+                GameObject cp = GameObject.Find("Checkpoint");
+                if (cp != null) checkpointPoint = cp.transform;
+            }
+            if (playerObject == null)
+            {
+                playerObject = GameObject.FindGameObjectWithTag("Player");
+            }
             if (boars.Count == 0)
             {
                 boars.AddRange(FindObjectsByType<BoarAI>(FindObjectsSortMode.None));
@@ -79,13 +97,28 @@ namespace Jejak.Gameplay1
             {
                 trees.AddRange(FindObjectsByType<TreeChop>(FindObjectsSortMode.None));
             }
-
-            if (CutsceneVideoManager.Instance == null)
-            {
-                StartGameplay1();
-            }
         }
 
+        private void Update()
+        {
+            if (playerObject == null || checkpointPoint == null)
+            {
+                FindReferences();
+            }
+
+            if (checkpointPoint != null && playerObject != null)
+            {
+                Vector3 diff = playerObject.transform.position - checkpointPoint.position;
+                diff.y = 0f;
+
+                IsPlayerInCheckpoint = (diff.magnitude <= 3.5f);
+            }
+
+            if (currentWood >= targetWood && IsPlayerInCheckpoint && currentPhase != GameplayPhase.GameplayFinished)
+            {
+                FinishGameplay1();
+            }
+        }
 
         public void StartGameplay1()
         {
@@ -150,7 +183,7 @@ namespace Jejak.Gameplay1
 
             if (Gameplay1HUD.Instance != null)
             {
-                Gameplay1HUD.Instance.ShowBanner(" PERINGATAN: INVASI BABI HUTAN! (00:30)\nLARI DAN BERLINDUNG DI CHECKPOINT!", 5f);
+                Gameplay1HUD.Instance.ShowBanner("PERINGATAN: INVASI BABI HUTAN! (00:30)\nLARI DAN BERLINDUNG DI CHECKPOINT!", 5f);
             }
 
             if (timerRoutine != null) StopCoroutine(timerRoutine);
@@ -203,22 +236,27 @@ namespace Jejak.Gameplay1
 
             if (currentWood >= targetWood)
             {
-                Debug.Log("<color=green>[Gameplay 1] Target 100 Balok sudah tercapai!</color>");
-                if (Gameplay1HUD.Instance != null)
+                Debug.Log("<color=green>[Gameplay 1] Target 100 Balok tercapai!</color>");
+
+                if (IsPlayerInCheckpoint)
                 {
-                    Gameplay1HUD.Instance.ShowBanner(" TARGET 100 BALOK TERCAPAI!\nBerlindunglah di checkpoint sampai invasi selesai atau selesaikan misi!", 4f);
+                    FinishGameplay1();
+                }
+                else if (Gameplay1HUD.Instance != null)
+                {
+                    Gameplay1HUD.Instance.ShowBanner("TARGET 100 BALOK TERCAPAI!\nSegera lari masuk ke Checkpoint (Kotak Kuning)!", 5f);
                 }
             }
         }
 
-        private void FinishGameplay1()
+        public void FinishGameplay1()
         {
             currentPhase = GameplayPhase.GameplayFinished;
             Debug.Log("<color=green>[Gameplay 1 SELESAI] Sukses mengumpulkan 100 balok! Beralih ke Bagian D (The Consequence).</color>");
 
             if (Gameplay1HUD.Instance != null)
             {
-                Gameplay1HUD.Instance.ShowBanner(" GAMEPLAY 1 SELESAI!\n100 Balok Kayu Berhasil Terkumpul!", 5f);
+                Gameplay1HUD.Instance.ShowBanner("GAMEPLAY 1 SELESAI!\n100 Balok Berhasil Terkumpul!", 4f);
             }
 
             if (CutsceneVideoManager.Instance != null)
@@ -246,6 +284,11 @@ namespace Jejak.Gameplay1
             if (inCheckpoint)
             {
                 Debug.Log("<color=green>[Zona] Pemain AMAN di Checkpoint!</color>");
+
+                if (currentWood >= targetWood && currentPhase != GameplayPhase.GameplayFinished)
+                {
+                    FinishGameplay1();
+                }
             }
             else
             {

@@ -19,10 +19,8 @@ namespace Jejak.Core
         public GameEra CurrentEra => currentEra;
 
         [Header("World Group GameObjects")]
-        [Tooltip("Parent GameObject yang berisi semua elemen Era Modern (Jalan raya, mobil, lampu kota)")]
         [SerializeField] private GameObject modernWorldGroup;
 
-        [Tooltip("Parent GameObject yang berisi semua elemen Era Masa Lalu (Desa kuno, pepohonan lebat, warga masa lalu)")]
         [SerializeField] private GameObject pastWorldGroup;
 
         [Header("Bridge States")]
@@ -118,7 +116,7 @@ namespace Jejak.Core
         public void SetBridgeCompletedInPast()
         {
             isBridgeBuiltInPast = true;
-            isForestDeforested = true; 
+            isForestDeforested = true;
             Debug.Log("<color=cyan>[TimeManager] Jembatan masa lalu selesai! Hutan menjadi gundul untuk masa depan.</color>");
         }
     }

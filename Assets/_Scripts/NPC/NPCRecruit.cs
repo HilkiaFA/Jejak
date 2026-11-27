@@ -6,9 +6,9 @@ namespace Jejak.NPC
 {
     public enum NPCSkillType
     {
-        WaterControl,  
-        HeavyLifting,  
-        Architecture   
+        WaterControl,
+        HeavyLifting,
+        Architecture
     }
 
     [RequireComponent(typeof(Collider))]
@@ -24,7 +24,6 @@ namespace Jejak.NPC
 
         [Header("Status & Work Location")]
         public bool isRecruited = false;
-        [Tooltip("Posisi tempat NPC akan berdiri di jembatan saat mulai membantu (opsional)")]
         [SerializeField] private Transform constructionWorkSpot;
 
         [Header("Bridge Reference")]
@@ -100,7 +99,7 @@ namespace Jejak.NPC
         {
             if (isPlayerNearby)
             {
-                string text = isRecruited 
+                string text = isRecruited
                     ? $"{npcName}: \"{dialogueAfterRecruit}\""
                     : $"{npcName}: \"{dialogueBeforeRecruit}\"\n[Tekan E untuk Minta Tolong]";
 

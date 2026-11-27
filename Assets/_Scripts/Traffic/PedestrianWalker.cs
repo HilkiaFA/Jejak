@@ -27,11 +27,10 @@ namespace Jejak.Traffic
             if (targetPoint == null) return;
 
             Vector3 direction = (targetPoint.position - transform.position);
-            direction.y = 0; 
+            direction.y = 0;
 
             if (direction.magnitude <= arriveThreshold)
             {
-                
                 targetPoint = (targetPoint == pointA) ? pointB : pointA;
             }
             else

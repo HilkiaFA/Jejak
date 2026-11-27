@@ -11,13 +11,10 @@ namespace Jejak.Environment
     public class BridgeConstruction : MonoBehaviour
     {
         [Header("Building Phase Visuals (GameObjects)")]
-        [Tooltip("Visual Fase 1: Tiang Pancang Dasar")]
         [SerializeField] private GameObject phase1Foundation;
 
-        [Tooltip("Visual Fase 2: Rangka Balok Kayu Utama")]
         [SerializeField] private GameObject phase2Framework;
 
-        [Tooltip("Visual Fase 3: Jembatan Lengkap (Lantai & Pagar)")]
         [SerializeField] private GameObject phase3Completed;
 
         [Header("Current Progress")]
@@ -49,7 +46,6 @@ namespace Jejak.Environment
             UpdateVisuals();
         }
 
-      
         public void SyncWithRecruitedNPCs()
         {
             NPCRecruit[] npcs = FindObjectsByType<NPCRecruit>(FindObjectsSortMode.None);
@@ -191,24 +187,24 @@ namespace Jejak.Environment
             string statusText = "";
             if (isBuildingInProgress)
             {
-                statusText = "🔨 Sedang Membangun... Harap tunggu...";
+                statusText = " Sedang Membangun... Harap tunggu...";
             }
             else if (currentPhase == 0)
             {
-                statusText = hasWaterController 
-                    ? "[Tekan E] Tanam Tiang Pancang (Air sudah ditenangkan Ki Tirta)" 
+                statusText = hasWaterController
+                    ? "[Tekan E] Tanam Tiang Pancang (Air sudah ditenangkan Ki Tirta)"
                     : " Arus terlalu deras! Cari & rekrut Ki Tirta dulu.";
             }
             else if (currentPhase == 1)
             {
-                statusText = hasLumberjack 
-                    ? "[Tekan E] Pasang Rangka Balok Kayu (Dibantu Bima)" 
+                statusText = hasLumberjack
+                    ? "[Tekan E] Pasang Rangka Balok Kayu (Dibantu Bima)"
                     : " Butuh balok kayu kokoh! Cari & rekrut Bima si Penebang.";
             }
             else if (currentPhase == 2)
             {
-                statusText = hasArchitect 
-                    ? "[Tekan E] Kunci Pasak Abadi (Arahan Empu Rancang)" 
+                statusText = hasArchitect
+                    ? "[Tekan E] Kunci Pasak Abadi (Arahan Empu Rancang)"
                     : " Butuh teknik pasak kuno! Cari & rekrut Empu Rancang.";
             }
             else

@@ -1,7 +1,9 @@
 using System.Collections;
+using System.IO;
 using UnityEngine;
 using UnityEngine.Video;
 using UnityEngine.InputSystem;
+using Jejak.Player;
 using Jejak.Gameplay1;
 using Jejak.Gameplay2;
 
@@ -24,7 +26,6 @@ namespace Jejak.Core
 
         [Header("Video Clips")]
         [SerializeField] private VideoClip introVideoClip;
-
         [SerializeField] private VideoClip outroVideoClip;
 
         [Header("Gameplay Objects & Groups")]
@@ -32,16 +33,59 @@ namespace Jejak.Core
         [SerializeField] private GameObject pastWorldGroup;
         [SerializeField] private GameObject gameplay1Group;
         [SerializeField] private GameObject gameplay2Group;
+        [SerializeField] private GameObject gameplay3Group;
 
         [Header("Skip Settings")]
         [SerializeField] private bool allowSkip = true;
 
         private ActiveVideo currentActiveVideo = ActiveVideo.None;
+        private float videoStartTime = 0f;
 
         private void Awake()
         {
-            if (Instance == null) Instance = this;
-            else Destroy(gameObject);
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            FindVideoPlayerComponent();
+            FindSceneReferences();
+        }
+
+        private void FindVideoPlayerComponent()
+        {
+            if (videoPlayer == null) videoPlayer = GetComponent<VideoPlayer>();
+            if (videoPlayer == null) videoPlayer = GetComponentInChildren<VideoPlayer>();
+            if (videoPlayer == null) videoPlayer = gameObject.AddComponent<VideoPlayer>();
+
+            videoPlayer.playOnAwake = false;
+            videoPlayer.waitForFirstFrame = true;
+            videoPlayer.aspectRatio = VideoAspectRatio.FitInside;
+        }
+
+        private void FindSceneReferences()
+        {
+            if (playerObject == null)
+            {
+                playerObject = GameObject.FindGameObjectWithTag("Player");
+            }
+            if (gameplay1Group == null)
+            {
+                gameplay1Group = GameObject.Find("Gameplay1_Group");
+            }
+            if (gameplay2Group == null)
+            {
+                gameplay2Group = GameObject.Find("Gameplay2_Group");
+            }
+            if (gameplay3Group == null)
+            {
+                gameplay3Group = GameObject.Find("Gameplay3_Group");
+            }
         }
 
         private void Start()
@@ -53,17 +97,23 @@ namespace Jejak.Core
         {
             if (currentActiveVideo != ActiveVideo.None && allowSkip)
             {
-                var keyboard = Keyboard.current;
-                if (keyboard != null && (keyboard.spaceKey.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame))
+                if (Time.time - videoStartTime > 1.2f)
                 {
-                    Debug.Log("<color=yellow>[Cutscene] Video dilewati (Skip)!</color>");
-                    if (currentActiveVideo == ActiveVideo.IntroVideo)
+                    var keyboard = Keyboard.current;
+                    bool skipPressed = (keyboard != null && (keyboard.spaceKey.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame))
+                        || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Escape);
+
+                    if (skipPressed)
                     {
-                        FinishIntroVideo();
-                    }
-                    else if (currentActiveVideo == ActiveVideo.OutroVideo)
-                    {
-                        FinishOutroVideo();
+                        Debug.Log("<color=yellow>[Cutscene] Video dilewati (Skip)!</color>");
+                        if (currentActiveVideo == ActiveVideo.IntroVideo)
+                        {
+                            FinishIntroVideo();
+                        }
+                        else if (currentActiveVideo == ActiveVideo.OutroVideo)
+                        {
+                            FinishOutroVideo();
+                        }
                     }
                 }
             }
@@ -72,24 +122,67 @@ namespace Jejak.Core
         public void PlayIntroCutscene()
         {
             currentActiveVideo = ActiveVideo.IntroVideo;
+            videoStartTime = Time.time;
 
-            if (playerObject != null) playerObject.SetActive(false);
-            if (pastWorldGroup != null) pastWorldGroup.SetActive(false);
+            ConfigureCameraAndPlayer(false);
 
-            if (videoPlayer != null && introVideoClip != null)
+            if (gameplay1Group != null) gameplay1Group.SetActive(false);
+            if (gameplay2Group != null) gameplay2Group.SetActive(false);
+            if (gameplay3Group != null) gameplay3Group.SetActive(false);
+
+            bool videoReady = SetupVideoSource(introVideoClip, "Closing PKKMB.mp4");
+
+            if (videoReady)
             {
                 if (videoScreenUI != null) videoScreenUI.SetActive(true);
 
-                videoPlayer.clip = introVideoClip;
                 videoPlayer.loopPointReached += OnIntroVideoFinished;
                 videoPlayer.Play();
                 Debug.Log("<color=cyan>[Cutscene] Memutar Video 1 (Intro Bagian B)...</color>");
             }
             else
             {
-                Debug.LogWarning("[Cutscene] File Video 1 belum dipasang. Langsung memulai GAMEPLAY 1.");
+                Debug.LogWarning("[Cutscene] File Video 1 tidak ditemukan. Langsung memulai Gameplay 1.");
                 FinishIntroVideo();
             }
+        }
+
+        private bool SetupVideoSource(VideoClip clip, string fallbackFileName)
+        {
+            Camera targetCam = Camera.main;
+            if (targetCam == null) targetCam = FindFirstObjectByType<Camera>();
+
+            videoPlayer.renderMode = VideoRenderMode.CameraNearPlane;
+            videoPlayer.targetCamera = targetCam;
+
+            if (clip != null)
+            {
+                videoPlayer.source = VideoSource.VideoClip;
+                videoPlayer.clip = clip;
+                return true;
+            }
+
+            string filePath = Path.Combine(Application.dataPath, "Color", fallbackFileName);
+            if (File.Exists(filePath))
+            {
+                videoPlayer.source = VideoSource.Url;
+                videoPlayer.url = filePath;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void ConfigureCameraAndPlayer(bool enablePlayerControls)
+        {
+            if (playerObject == null) playerObject = GameObject.FindGameObjectWithTag("Player");
+            if (playerObject == null) return;
+
+            var cc = playerObject.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = enablePlayerControls;
+
+            var pc = playerObject.GetComponent<PlayerController>();
+            if (pc != null) pc.enabled = enablePlayerControls;
         }
 
         private void OnIntroVideoFinished(VideoPlayer source)
@@ -101,7 +194,12 @@ namespace Jejak.Core
         private void FinishIntroVideo()
         {
             currentActiveVideo = ActiveVideo.None;
-            if (videoPlayer != null && videoPlayer.isPlaying) videoPlayer.Stop();
+
+            if (videoPlayer != null && videoPlayer.isPlaying)
+            {
+                videoPlayer.Stop();
+            }
+
             if (videoScreenUI != null) videoScreenUI.SetActive(false);
 
             StartPastGameplay1();
@@ -109,10 +207,12 @@ namespace Jejak.Core
 
         public void StartPastGameplay1()
         {
+            ConfigureCameraAndPlayer(true);
+
             if (pastWorldGroup != null) pastWorldGroup.SetActive(true);
-            if (playerObject != null) playerObject.SetActive(true);
             if (gameplay1Group != null) gameplay1Group.SetActive(true);
             if (gameplay2Group != null) gameplay2Group.SetActive(false);
+            if (gameplay3Group != null) gameplay3Group.SetActive(false);
 
             Debug.Log("<color=green>[Gameplay] Karakter terbangun di MASA LALU! Memulai Gameplay 1.</color>");
 
@@ -126,22 +226,28 @@ namespace Jejak.Core
         public void PlayOutroCutscene()
         {
             currentActiveVideo = ActiveVideo.OutroVideo;
+            videoStartTime = Time.time;
 
-            if (playerObject != null) playerObject.SetActive(false);
+            ConfigureCameraAndPlayer(false);
+
             if (pastWorldGroup != null) pastWorldGroup.SetActive(false);
+            if (gameplay1Group != null) gameplay1Group.SetActive(false);
+            if (gameplay2Group != null) gameplay2Group.SetActive(false);
+            if (gameplay3Group != null) gameplay3Group.SetActive(false);
 
-            if (videoPlayer != null && outroVideoClip != null)
+            bool videoReady = SetupVideoSource(outroVideoClip, "Closing PKKMB 2.mp4");
+
+            if (videoReady)
             {
                 if (videoScreenUI != null) videoScreenUI.SetActive(true);
 
-                videoPlayer.clip = outroVideoClip;
                 videoPlayer.loopPointReached += OnOutroFinished;
                 videoPlayer.Play();
-                Debug.Log("<color=cyan>[Cutscene] Memutar Video 2: Bagian D (The Consequence)...</color>");
+                Debug.Log("<color=cyan>[Cutscene] Memutar Video 2 (The Consequence - Bagian D)...</color>");
             }
             else
             {
-                Debug.LogWarning("[Cutscene] File Video 2 belum dipasang. Langsung beralih ke GAMEPLAY 2.");
+                Debug.LogWarning("[Cutscene] File Video 2 tidak ditemukan. Langsung memulai Gameplay 2.");
                 FinishOutroVideo();
             }
         }
@@ -152,35 +258,35 @@ namespace Jejak.Core
             FinishOutroVideo();
         }
 
-        public void FinishOutroVideo()
+        private void FinishOutroVideo()
         {
             currentActiveVideo = ActiveVideo.None;
-            if (videoPlayer != null && videoPlayer.isPlaying) videoPlayer.Stop();
+
+            if (videoPlayer != null && videoPlayer.isPlaying)
+            {
+                videoPlayer.Stop();
+            }
+
             if (videoScreenUI != null) videoScreenUI.SetActive(false);
 
-            Debug.Log("<color=yellow>[Cutscene] Video 2 Selesai. Memulai GAMEPLAY 2 (Gotong Royong & Pelestarian)!</color>");
+            StartGameplay2();
+        }
 
-            if (Gameplay1Manager.Instance != null)
-            {
-                Gameplay1Manager.Instance.gameObject.SetActive(false);
-            }
+        public void StartGameplay2()
+        {
+            ConfigureCameraAndPlayer(true);
+
+            if (pastWorldGroup != null) pastWorldGroup.SetActive(true);
             if (gameplay1Group != null) gameplay1Group.SetActive(false);
             if (gameplay2Group != null) gameplay2Group.SetActive(true);
+            if (gameplay3Group != null) gameplay3Group.SetActive(false);
 
-            if (playerObject != null) playerObject.SetActive(true);
-            if (pastWorldGroup != null) pastWorldGroup.SetActive(true);
+            Debug.Log("<color=green>[Gameplay] Bangun kembali di 2011 untuk KESEMPATAN KEDUA! Memulai Gameplay 2.</color>");
 
             if (Gameplay2Manager.Instance != null)
             {
+                Gameplay2Manager.Instance.gameObject.SetActive(true);
                 Gameplay2Manager.Instance.StartGameplay2();
-            }
-        }
-
-        private void OnGUI()
-        {
-            if (currentActiveVideo != ActiveVideo.None && allowSkip)
-            {
-                GUI.Label(new Rect(Screen.width - 220, Screen.height - 40, 200, 30), "Tekan [SPACE] untuk Skip Video");
             }
         }
     }

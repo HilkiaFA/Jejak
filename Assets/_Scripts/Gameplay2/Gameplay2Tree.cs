@@ -4,6 +4,17 @@ using UnityEngine.InputSystem;
 
 namespace Jejak.Gameplay2
 {
+    public enum TreeType
+    {
+        Ulin,
+        Merbau,
+        Jati,
+        Bambu,
+        Beringin,
+        Gaharu,
+        Mahoni
+    }
+
     public enum TreeCategory
     {
         Legal,
@@ -12,7 +23,8 @@ namespace Jejak.Gameplay2
 
     public class Gameplay2Tree : MonoBehaviour
     {
-        [Header("Tree Info")]
+        [Header("Tree Type Configuration")]
+        public TreeType treeType = TreeType.Ulin;
         public string treeName = "Pohon Ulin";
         public TreeCategory category = TreeCategory.Legal;
         public int maxHP = 150;
@@ -31,8 +43,77 @@ namespace Jejak.Gameplay2
         private float hitCooldown = 0.5f;
         private Vector3 startPosition;
 
+        private void OnValidate()
+        {
+            ApplyTreeTypeDefaults();
+        }
+
+        private void ApplyTreeTypeDefaults()
+        {
+            switch (treeType)
+            {
+                case TreeType.Ulin:
+                    treeName = "Pohon Ulin";
+                    category = TreeCategory.Legal;
+                    maxHP = 150;
+                    woodReward = 15;
+                    seedlingReward = 1;
+                    break;
+
+                case TreeType.Merbau:
+                    treeName = "Pohon Merbau";
+                    category = TreeCategory.Legal;
+                    maxHP = 130;
+                    woodReward = 13;
+                    seedlingReward = 1;
+                    break;
+
+                case TreeType.Jati:
+                    treeName = "Pohon Jati";
+                    category = TreeCategory.Legal;
+                    maxHP = 100;
+                    woodReward = 10;
+                    seedlingReward = 1;
+                    break;
+
+                case TreeType.Bambu:
+                    treeName = "Pohon Bambu";
+                    category = TreeCategory.Legal;
+                    maxHP = 70;
+                    woodReward = 9;
+                    seedlingReward = 1;
+                    break;
+
+                case TreeType.Beringin:
+                    treeName = "Pohon Beringin";
+                    category = TreeCategory.Protected;
+                    maxHP = 170;
+                    woodReward = 0;
+                    seedlingReward = 0;
+                    break;
+
+                case TreeType.Gaharu:
+                    treeName = "Pohon Gaharu";
+                    category = TreeCategory.Protected;
+                    maxHP = 136;
+                    woodReward = 0;
+                    seedlingReward = 0;
+                    break;
+
+                case TreeType.Mahoni:
+                    treeName = "Pohon Mahoni";
+                    category = TreeCategory.Protected;
+                    maxHP = 120;
+                    woodReward = 0;
+                    seedlingReward = 0;
+                    break;
+            }
+            currentHP = maxHP;
+        }
+
         private void Start()
         {
+            ApplyTreeTypeDefaults();
             startPosition = transform.position;
             ResetTree();
 
@@ -58,12 +139,16 @@ namespace Jejak.Gameplay2
             if (isPlayerNearby)
             {
                 var keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.eKey.wasPressedThisFrame)
+                var mouse = Mouse.current;
+
+                bool attackTriggered = (keyboard != null && keyboard.eKey.wasPressedThisFrame)
+                    || (mouse != null && mouse.leftButton.wasPressedThisFrame)
+                    || Input.GetKeyDown(KeyCode.E)
+                    || Input.GetMouseButtonDown(0);
+
+                if (attackTriggered && Time.time - lastHitTime >= hitCooldown)
                 {
-                    if (Time.time - lastHitTime >= hitCooldown)
-                    {
-                        HitTree();
-                    }
+                    HitTree();
                 }
             }
         }
@@ -166,21 +251,35 @@ namespace Jejak.Gameplay2
 
             if (isPlayerNearby)
             {
+                Vector3 screenPos = Camera.main != null ? Camera.main.WorldToScreenPoint(transform.position + Vector3.up * 2f) : Vector3.zero;
+
                 string info = "";
                 if (category == TreeCategory.Protected)
                 {
                     info = isClassificationRevealed
-                        ? $"DILINDUNGI: {treeName} (JANGAN DITEBANG!)"
-                        : $"{treeName} [Tekan E]";
+                        ? $"<color=red><b>[DILINDUNGI]</b> {treeName}\n(JANGAN DITEBANG! Babi Hutan Mengamuk)</color>"
+                        : $"{treeName}\n[Klik Kiri / E] Tebang Pohon";
                 }
                 else
                 {
                     info = isClassificationRevealed
-                        ? $"BOLEH: {treeName} (HP: {currentHP}/{maxHP}) [Tekan E]"
-                        : $"{treeName} (HP: {currentHP}/{maxHP}) [Tekan E]";
+                        ? $"<color=green><b>[BOLEH]</b> {treeName} (HP: {currentHP}/{maxHP})\nBalok: +{woodReward} | Bibit: +{seedlingReward}</color>\n[Klik Kiri / E] Tebang Pohon"
+                        : $"{treeName} (HP: {currentHP}/{maxHP})\n[Klik Kiri / E] Tebang Pohon";
                 }
 
-                GUI.Box(new Rect(Screen.width / 2 - 170, Screen.height - 80, 340, 35), info);
+                GUIStyle style = new GUIStyle(GUI.skin.box);
+                style.fontSize = 12;
+                style.alignment = TextAnchor.MiddleCenter;
+
+                float boxW = 320;
+                float boxH = 55;
+                float x = (screenPos.z > 0) ? screenPos.x - boxW / 2 : Screen.width / 2 - boxW / 2;
+                float y = (screenPos.z > 0) ? Screen.height - screenPos.y - boxH : Screen.height - 100;
+
+                x = Mathf.Clamp(x, 20, Screen.width - boxW - 20);
+                y = Mathf.Clamp(y, 20, Screen.height - boxH - 20);
+
+                GUI.Box(new Rect(x, y, boxW, boxH), info, style);
             }
         }
 

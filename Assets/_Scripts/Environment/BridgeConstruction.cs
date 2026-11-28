@@ -101,7 +101,8 @@ namespace Jejak.Environment
             if (isPlayerNearby && !isBuildingInProgress)
             {
                 var keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.eKey.wasPressedThisFrame)
+                bool ePressed = (keyboard != null && keyboard.eKey.wasPressedThisFrame) || Input.GetKeyDown(KeyCode.E);
+                if (ePressed)
                 {
                     TryAdvanceBuilding();
                 }

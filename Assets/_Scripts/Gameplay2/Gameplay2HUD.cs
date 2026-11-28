@@ -11,6 +11,7 @@ namespace Jejak.Gameplay2
         private string bannerMessage = "";
         private float bannerTimer = 0f;
 
+        private Gameplay2NPC nearbyNPC = null;
         private Gameplay2NPC currentInteractingNPC = null;
 
         private void Awake()
@@ -34,19 +35,31 @@ namespace Jejak.Gameplay2
 
             CheckNPCProximity();
 
+            if (nearbyNPC != null && currentInteractingNPC == null)
+            {
+                var kb = Keyboard.current;
+                bool ePressed = (kb != null && kb.eKey.wasPressedThisFrame) || Input.GetKeyDown(KeyCode.E);
+                if (ePressed)
+                {
+                    currentInteractingNPC = nearbyNPC;
+                }
+            }
+
             if (currentInteractingNPC != null)
             {
                 var kb = Keyboard.current;
-                if (kb != null)
+                bool opt1Pressed = (kb != null && (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame))
+                    || Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1);
+                bool opt2Pressed = (kb != null && (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame))
+                    || Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2);
+
+                if (opt1Pressed)
                 {
-                    if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame)
-                    {
-                        SelectOption(1);
-                    }
-                    else if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame)
-                    {
-                        SelectOption(2);
-                    }
+                    SelectOption(1);
+                }
+                else if (opt2Pressed)
+                {
+                    SelectOption(2);
                 }
             }
 
@@ -56,7 +69,8 @@ namespace Jejak.Gameplay2
                 Gameplay2Manager.Instance.currentPhase != G2Phase.Finished)
             {
                 var kb = Keyboard.current;
-                if (kb != null && kb.eKey.wasPressedThisFrame)
+                bool submitPressed = (kb != null && kb.eKey.wasPressedThisFrame) || Input.GetKeyDown(KeyCode.E);
+                if (submitPressed)
                 {
                     Gameplay2Manager.Instance.SubmitWoodAndBuildBridge();
                 }
@@ -68,14 +82,14 @@ namespace Jejak.Gameplay2
             if (Gameplay2Manager.Instance == null || Gameplay2Manager.Instance.playerTransform == null) return;
 
             Transform pt = Gameplay2Manager.Instance.playerTransform;
-            currentInteractingNPC = null;
+            nearbyNPC = null;
 
             var warga = Gameplay2Manager.Instance.wargaNPC;
             if (warga != null && !warga.isRecruited && !warga.isDead)
             {
                 if (Vector3.Distance(pt.position, warga.transform.position) <= 2.5f)
                 {
-                    currentInteractingNPC = warga;
+                    nearbyNPC = warga;
                     return;
                 }
             }
@@ -85,8 +99,16 @@ namespace Jejak.Gameplay2
             {
                 if (Vector3.Distance(pt.position, mhs.transform.position) <= 2.5f)
                 {
-                    currentInteractingNPC = mhs;
+                    nearbyNPC = mhs;
                     return;
+                }
+            }
+
+            if (currentInteractingNPC != null)
+            {
+                if (Vector3.Distance(pt.position, currentInteractingNPC.transform.position) > 3.5f)
+                {
+                    currentInteractingNPC = null;
                 }
             }
         }
@@ -97,12 +119,27 @@ namespace Jejak.Gameplay2
 
             if (option == 1)
             {
-                currentInteractingNPC.Recruit();
-                ShowBanner($" {currentInteractingNPC.npcName} Bergabung!", 3f);
+                if (currentInteractingNPC.npcType == NPCType.Warga)
+                {
+                    currentInteractingNPC.Recruit();
+                    ShowBanner("Warga Bergabung! Ulin, Merbau, Jati, dan Bambu boleh ditebang. Beringin, Gaharu, dan Mahoni jangan.", 6f);
+                }
+                else
+                {
+                    currentInteractingNPC.Recruit();
+                    ShowBanner("Mahasiswa Bergabung! Siap membantu menebang pohon yang diperbolehkan.", 5f);
+                }
             }
             else
             {
-                ShowBanner("Dialog ditutup.", 1.5f);
+                if (currentInteractingNPC.npcType == NPCType.Warga)
+                {
+                    ShowBanner("Warga: \"Ya sudah, hati-hati. Kalau berubah pikiran, saya di sini.\"", 3f);
+                }
+                else
+                {
+                    ShowBanner("Mahasiswa: \"Oke, Kak. Kalau butuh bantuan, panggil aku.\"", 3f);
+                }
             }
             currentInteractingNPC = null;
         }
@@ -138,25 +175,30 @@ namespace Jejak.Gameplay2
             int wood = Gameplay2Manager.Instance.currentWood;
             int targetWood = Gameplay2Manager.Instance.targetWood;
             int seedlings = Gameplay2Manager.Instance.currentSeedlings;
-            float timer = Gameplay2Manager.Instance.remainingTime;
-
+            float timer = Mathf.Max(0, Gameplay2Manager.Instance.remainingTime);
             int min = Mathf.FloorToInt(timer / 60f);
             int sec = Mathf.FloorToInt(timer % 60f);
             string timeStr = string.Format("{0:00}:{1:00}", min, sec);
 
             GUIStyle boxStyle = new GUIStyle(GUI.skin.box);
-            boxStyle.fontSize = 14;
+            boxStyle.fontSize = 13;
             boxStyle.fontStyle = FontStyle.Bold;
             boxStyle.alignment = TextAnchor.MiddleLeft;
 
-            GUILayout.BeginArea(new Rect(20, 20, 280, 160), boxStyle);
+            GUILayout.BeginArea(new Rect(20, 20, 300, 165), boxStyle);
             GUILayout.Space(4);
             GUILayout.Label($"Balok : <b>{wood} / {targetWood}</b> | Bibit : <b>{seedlings}</b>");
 
-            if (Gameplay2Manager.Instance.currentPhase == G2Phase.InvasionPeriod || Gameplay2Manager.Instance.currentPhase == G2Phase.EnragedInvasion)
+            if (Gameplay2Manager.Instance.currentPhase == G2Phase.InvasionPeriod)
             {
                 GUI.color = Color.red;
                 GUILayout.Label($"INVASI : <b>{timeStr}</b>");
+                GUI.color = Color.white;
+            }
+            else if (Gameplay2Manager.Instance.currentPhase == G2Phase.EnragedInvasion)
+            {
+                GUI.color = Color.red;
+                GUILayout.Label($"BABI MENGAMUK : <b>{timeStr}</b>");
                 GUI.color = Color.white;
             }
             else
@@ -168,44 +210,64 @@ namespace Jejak.Gameplay2
 
             var w = Gameplay2Manager.Instance.wargaNPC;
             string wStatus = (w == null) ? "Tidak Ada" : w.isDead ? "<color=red>Gugur</color>" : w.isRecruited ? $"<color=green>{w.currentHP}/{w.maxHP}</color>" : "<color=yellow>Belum Rekrut</color>";
-            GUILayout.Label($"Warga : <b>{wStatus}</b> (Damage +3)");
+            GUILayout.Label($"Warga : <b>{wStatus}</b> (Bantuan +3 DMG)");
 
             var m = Gameplay2Manager.Instance.mahasiswaNPC;
             string mStatus = (m == null) ? "Tidak Ada" : m.isDead ? "<color=red>Gugur</color>" : m.isRecruited ? $"<color=green>{m.currentHP}/{m.maxHP}</color>" : "<color=yellow>Belum Rekrut</color>";
-            GUILayout.Label($"Mahasiswa : <b>{mStatus}</b> (Damage +10)");
+            GUILayout.Label($"Mahasiswa : <b>{mStatus}</b> (Bantuan +10 DMG)");
             GUILayout.EndArea();
 
             if (!string.IsNullOrEmpty(bannerMessage))
             {
                 GUIStyle bStyle = new GUIStyle(GUI.skin.box);
-                bStyle.fontSize = 18;
+                bStyle.fontSize = 15;
                 bStyle.fontStyle = FontStyle.Bold;
                 bStyle.alignment = TextAnchor.MiddleCenter;
 
                 GUI.color = Color.yellow;
-                GUI.Box(new Rect(Screen.width / 2 - 270, 30, 540, 60), bannerMessage, bStyle);
+                GUI.Box(new Rect(Screen.width / 2 - 320, 25, 640, 65), bannerMessage, bStyle);
                 GUI.color = Color.white;
+            }
+
+            if (nearbyNPC != null && currentInteractingNPC == null)
+            {
+                Vector3 screenPos = Camera.main != null ? Camera.main.WorldToScreenPoint(nearbyNPC.transform.position + Vector3.up * 2f) : Vector3.zero;
+
+                GUIStyle promptStyle = new GUIStyle(GUI.skin.box);
+                promptStyle.fontSize = 13;
+                promptStyle.fontStyle = FontStyle.Bold;
+                promptStyle.alignment = TextAnchor.MiddleCenter;
+
+                float bw = 260;
+                float bh = 40;
+                float px = (screenPos.z > 0) ? screenPos.x - bw / 2 : Screen.width / 2 - bw / 2;
+                float py = (screenPos.z > 0) ? Screen.height - screenPos.y - bh : Screen.height - 120;
+
+                px = Mathf.Clamp(px, 20, Screen.width - bw - 20);
+                py = Mathf.Clamp(py, 20, Screen.height - bh - 20);
+
+                GUI.Box(new Rect(px, py, bw, bh), $"[Tekan E] Bicara dengan {nearbyNPC.npcName}", promptStyle);
             }
 
             if (currentInteractingNPC != null)
             {
                 GUIStyle dBox = new GUIStyle(GUI.skin.box);
-                dBox.fontSize = 15;
+                dBox.fontSize = 14;
                 dBox.fontStyle = FontStyle.Bold;
 
-                GUILayout.BeginArea(new Rect(Screen.width / 2 - 250, Screen.height - 210, 500, 180), dBox);
+                GUILayout.BeginArea(new Rect(Screen.width / 2 - 280, Screen.height - 230, 560, 200), dBox);
                 GUILayout.Space(8);
 
                 if (currentInteractingNPC.npcType == NPCType.Warga)
                 {
                     GUILayout.Label("Warga Desa:");
                     GUILayout.Label("\"Mau menebang pohon lagi, Nak? Hutan ini sudah banyak yang rusak.\"");
-                    GUILayout.Space(10);
-                    if (GUILayout.Button("1. [Ajak Kerja Sama] \"Saya mau perbaiki jembatan tanpa merusak hutan. Mau bantu?\"", GUILayout.Height(36)))
+                    GUILayout.Space(12);
+                    if (GUILayout.Button("1. [Ajak Kerja Sama] \"Bukan, Pak. Saya mau memperbaiki jembatan tanpa merusak hutan. Mau bantu?\"", GUILayout.Height(40)))
                     {
                         SelectOption(1);
                     }
-                    if (GUILayout.Button("2. [Tidak Jadi] \"Saya jalan sendiri saja, Pak.\"", GUILayout.Height(32)))
+                    if (GUILayout.Button("2. [Tidak Jadi] \"Tidak jadi, Pak. Saya jalan sendiri saja.\"", GUILayout.Height(36)))
                     {
                         SelectOption(2);
                     }
@@ -214,12 +276,12 @@ namespace Jejak.Gameplay2
                 {
                     GUILayout.Label("Mahasiswa:");
                     GUILayout.Label("\"Kak, mau bangun jembatan? Aku bisa bantu nebang.\"");
-                    GUILayout.Space(10);
-                    if (GUILayout.Button("1. [Ajak Kerja Sama] \"Boleh. Tapi kita hanya tebang pohon yang diperbolehkan ya.\"", GUILayout.Height(36)))
+                    GUILayout.Space(12);
+                    if (GUILayout.Button("1. [Ajak Kerja Sama] \"Boleh. Tapi kita hanya tebang pohon yang diperbolehkan, ya.\"", GUILayout.Height(40)))
                     {
                         SelectOption(1);
                     }
-                    if (GUILayout.Button("2. [Tidak Jadi] \"Tidak usah, aku bisa sendiri.\"", GUILayout.Height(32)))
+                    if (GUILayout.Button("2. [Tidak Jadi] \"Tidak usah, aku bisa sendiri.\"", GUILayout.Height(36)))
                     {
                         SelectOption(2);
                     }
@@ -232,11 +294,11 @@ namespace Jejak.Gameplay2
                 Gameplay2Manager.Instance.currentPhase != G2Phase.Finished)
             {
                 GUIStyle pStyle = new GUIStyle(GUI.skin.box);
-                pStyle.fontSize = 16;
+                pStyle.fontSize = 15;
                 pStyle.fontStyle = FontStyle.Bold;
                 pStyle.alignment = TextAnchor.MiddleCenter;
                 GUI.color = Color.green;
-                GUI.Box(new Rect(Screen.width / 2 - 250, Screen.height - 90, 500, 45), "[TEKAN E] Serahkan 100 Balok & Pasang Jembatan Gotong Royong!", pStyle);
+                GUI.Box(new Rect(Screen.width / 2 - 280, Screen.height - 90, 560, 48), "[TEKAN E] Serahkan 100 Balok & Bangun Jembatan Gotong Royong!", pStyle);
                 GUI.color = Color.white;
             }
         }

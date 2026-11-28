@@ -33,7 +33,8 @@ namespace Jejak.Environment
             if (isPlayerNearby)
             {
                 var keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.eKey.wasPressedThisFrame)
+                bool ePressed = (keyboard != null && keyboard.eKey.wasPressedThisFrame) || Input.GetKeyDown(KeyCode.E);
+                if (ePressed)
                 {
                     bool isBridgeDone = (bridgeConstruction != null && bridgeConstruction.currentPhase >= 3);
 

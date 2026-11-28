@@ -156,12 +156,12 @@ public class FirstPersonController : MonoBehaviour
             Cursor.lockState = CursorLockMode.Locked;
         }
 
-        if(crosshair)
+        if(crosshair && crosshairObject != null)
         {
             crosshairObject.sprite = crosshairImage;
             crosshairObject.color = crosshairColor;
         }
-        else
+        else if (crosshairObject != null)
         {
             crosshairObject.gameObject.SetActive(false);
         }
@@ -170,7 +170,7 @@ public class FirstPersonController : MonoBehaviour
 
         sprintBarCG = GetComponentInChildren<CanvasGroup>();
 
-        if(useSprintBar)
+        if(useSprintBar && sprintBarBG != null && sprintBar != null)
         {
             sprintBarBG.gameObject.SetActive(true);
             sprintBar.gameObject.SetActive(true);
@@ -184,15 +184,15 @@ public class FirstPersonController : MonoBehaviour
             sprintBarBG.rectTransform.sizeDelta = new Vector3(sprintBarWidth, sprintBarHeight, 0f);
             sprintBar.rectTransform.sizeDelta = new Vector3(sprintBarWidth - 2, sprintBarHeight - 2, 0f);
 
-            if(hideBarWhenFull)
+            if(hideBarWhenFull && sprintBarCG != null)
             {
                 sprintBarCG.alpha = 0;
             }
         }
         else
         {
-            sprintBarBG.gameObject.SetActive(false);
-            sprintBar.gameObject.SetActive(false);
+            if (sprintBarBG != null) sprintBarBG.gameObject.SetActive(false);
+            if (sprintBar != null) sprintBar.gameObject.SetActive(false);
         }
 
         #endregion
@@ -314,7 +314,7 @@ public class FirstPersonController : MonoBehaviour
             }
 
             // Handles sprintBar 
-            if(useSprintBar && !unlimitedSprint)
+            if(useSprintBar && !unlimitedSprint && sprintBar != null)
             {
                 float sprintRemainingPercent = sprintRemaining / sprintDuration;
                 sprintBar.transform.localScale = new Vector3(sprintRemainingPercent, 1f, 1f);
@@ -407,7 +407,7 @@ public class FirstPersonController : MonoBehaviour
                         Crouch();
                     }
 
-                    if (hideBarWhenFull && !unlimitedSprint)
+                    if (hideBarWhenFull && !unlimitedSprint && sprintBarCG != null)
                     {
                         sprintBarCG.alpha += 5 * Time.deltaTime;
                     }
@@ -420,7 +420,7 @@ public class FirstPersonController : MonoBehaviour
             {
                 isSprinting = false;
 
-                if (hideBarWhenFull && sprintRemaining == sprintDuration)
+                if (hideBarWhenFull && sprintRemaining == sprintDuration && sprintBarCG != null)
                 {
                     sprintBarCG.alpha -= 3 * Time.deltaTime;
                 }

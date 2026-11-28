@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using Jejak.Core;
 
 namespace Jejak.Gameplay1
@@ -25,11 +24,15 @@ namespace Jejak.Gameplay1
         public int CurrentWood => currentWood;
         public int TargetWood => targetWood;
 
+        [Header("MC Health Stats")]
+        [SerializeField] private int mcMaxHP = 100;
+        [SerializeField] private int mcCurrentHP = 100;
+        public int MCCurrentHP => mcCurrentHP;
+        public int MCMaxHP => mcMaxHP;
+
         [Header("Timer Settings")]
         [SerializeField] private float phase1Duration = 180.0f;
-
         [SerializeField] private float phase2Duration = 30.0f;
-
         private float remainingTime = 0f;
         public float RemainingTime => remainingTime;
 
@@ -55,6 +58,7 @@ namespace Jejak.Gameplay1
         [SerializeField] private List<TreeChop> trees = new List<TreeChop>();
 
         private Coroutine timerRoutine;
+        private bool isResetting = false;
 
         private void Awake()
         {
@@ -110,11 +114,10 @@ namespace Jejak.Gameplay1
             {
                 Vector3 diff = playerObject.transform.position - checkpointPoint.position;
                 diff.y = 0f;
-
                 IsPlayerInCheckpoint = (diff.magnitude <= 3.5f);
             }
 
-            if (currentWood >= targetWood && IsPlayerInCheckpoint && currentPhase != GameplayPhase.GameplayFinished)
+            if (currentWood >= targetWood && IsPlayerInCheckpoint && currentPhase != GameplayPhase.GameplayFinished && !isResetting)
             {
                 FinishGameplay1();
             }
@@ -124,20 +127,37 @@ namespace Jejak.Gameplay1
         {
             Debug.Log("<color=green>[Gameplay 1] Dimulai! Tujuan: Kumpulkan 100 Balok Kayu.</color>");
 
+            mcCurrentHP = mcMaxHP;
+            currentWood = 0;
+            isResetting = false;
+
             if (playerObject != null)
             {
                 playerObject.SetActive(true);
-                if (playerSpawnPoint != null)
-                {
-                    CharacterController cc = playerObject.GetComponent<CharacterController>();
-                    if (cc != null) cc.enabled = false;
-                    playerObject.transform.position = playerSpawnPoint.position;
-                    playerObject.transform.rotation = playerSpawnPoint.rotation;
-                    if (cc != null) cc.enabled = true;
-                }
+                TeleportPlayerToSpawn();
             }
 
             StartPhase1();
+        }
+
+        private void TeleportPlayerToSpawn()
+        {
+            if (playerObject == null) return;
+
+            CharacterController cc = playerObject.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+
+            if (playerSpawnPoint != null)
+            {
+                playerObject.transform.position = playerSpawnPoint.position + Vector3.up * 1.0f;
+                playerObject.transform.rotation = playerSpawnPoint.rotation;
+            }
+            else if (checkpointPoint != null)
+            {
+                playerObject.transform.position = checkpointPoint.position + Vector3.up * 1.5f;
+            }
+
+            if (cc != null) cc.enabled = true;
         }
 
         private void StartPhase1()
@@ -147,7 +167,7 @@ namespace Jejak.Gameplay1
 
             if (Gameplay1HUD.Instance != null)
             {
-                Gameplay1HUD.Instance.ShowBanner($"SIKLUS {currentCycle} - HUTAN AMAN! (Target: 100 Balok)", 4f);
+                Gameplay1HUD.Instance.ShowBanner($"SIKLUS {currentCycle} - HUTAN AMAN (Target: 100 Balok)", 4f);
             }
 
             if (timerRoutine != null) StopCoroutine(timerRoutine);
@@ -183,7 +203,7 @@ namespace Jejak.Gameplay1
 
             if (Gameplay1HUD.Instance != null)
             {
-                Gameplay1HUD.Instance.ShowBanner("PERINGATAN: INVASI BABI HUTAN! (00:30)\nLARI DAN BERLINDUNG DI CHECKPOINT!", 5f);
+                Gameplay1HUD.Instance.ShowBanner("PERINGATAN: INVASI BABI HUTAN (00:30)\nLARI DAN BERLINDUNG DI CHECKPOINT!", 5f);
             }
 
             if (timerRoutine != null) StopCoroutine(timerRoutine);
@@ -218,11 +238,6 @@ namespace Jejak.Gameplay1
                 if (boar != null) boar.ResetToNest();
             }
 
-            foreach (var tree in trees)
-            {
-                if (tree != null) tree.ResetTree();
-            }
-
             yield return new WaitForSeconds(3.0f);
 
             currentCycle++;
@@ -247,6 +262,56 @@ namespace Jejak.Gameplay1
                     Gameplay1HUD.Instance.ShowBanner("TARGET 100 BALOK TERCAPAI!\nSegera lari masuk ke Checkpoint (Kotak Kuning)!", 5f);
                 }
             }
+        }
+
+        public void TakeMCDamage(int damage)
+        {
+            if (isResetting || currentPhase == GameplayPhase.GameplayFinished) return;
+
+            mcCurrentHP -= damage;
+            Debug.Log($"<color=red>[MC Rusak] Diseruduk babi (-{damage} HP)! Sisa HP: {mcCurrentHP}/{mcMaxHP}</color>");
+
+            if (Gameplay1HUD.Instance != null)
+            {
+                Gameplay1HUD.Instance.TriggerHitFlash();
+            }
+
+            if (mcCurrentHP <= 0)
+            {
+                mcCurrentHP = 0;
+                StartCoroutine(MCDeathResetRoutine());
+            }
+        }
+
+        private IEnumerator MCDeathResetRoutine()
+        {
+            isResetting = true;
+            Debug.Log("<color=red>[MC GUGUR] MC kehabisan HP! Seluruh progres kayu direset.</color>");
+
+            if (Gameplay1HUD.Instance != null)
+            {
+                Gameplay1HUD.Instance.ShowBanner("MC MATI DISERUDUK BABI!\nBalok kayu direset ke 0 dan hutan kembali ke awal.", 4.5f);
+            }
+
+            yield return new WaitForSeconds(2.0f);
+
+            mcCurrentHP = mcMaxHP;
+            currentWood = 0;
+
+            TeleportPlayerToSpawn();
+
+            foreach (var boar in boars)
+            {
+                if (boar != null) boar.ResetToNest();
+            }
+
+            foreach (var tree in trees)
+            {
+                if (tree != null) tree.ResetTree();
+            }
+
+            isResetting = false;
+            StartPhase1();
         }
 
         public void FinishGameplay1()
@@ -285,7 +350,7 @@ namespace Jejak.Gameplay1
             {
                 Debug.Log("<color=green>[Zona] Pemain AMAN di Checkpoint!</color>");
 
-                if (currentWood >= targetWood && currentPhase != GameplayPhase.GameplayFinished)
+                if (currentWood >= targetWood && currentPhase != GameplayPhase.GameplayFinished && !isResetting)
                 {
                     FinishGameplay1();
                 }

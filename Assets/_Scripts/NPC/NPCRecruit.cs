@@ -61,7 +61,8 @@ namespace Jejak.NPC
             if (isPlayerNearby && !isRecruited)
             {
                 var keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.eKey.wasPressedThisFrame)
+                bool ePressed = (keyboard != null && keyboard.eKey.wasPressedThisFrame) || Input.GetKeyDown(KeyCode.E);
+                if (ePressed)
                 {
                     RecruitThisNPC();
                 }

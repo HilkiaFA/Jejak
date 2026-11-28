@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Jejak.Core;
+using Jejak.Gameplay3;
 
 namespace Jejak.Gameplay2
 {
@@ -46,6 +47,7 @@ namespace Jejak.Gameplay2
 
         public bool isPlayerInCheckpoint = false;
         private Coroutine timerRoutine;
+        private bool isResetting = false;
 
         private void Awake()
         {
@@ -55,10 +57,45 @@ namespace Jejak.Gameplay2
 
         private void Start()
         {
+            FindSceneReferences();
+
             if (CutsceneVideoManager.Instance == null)
             {
                 StartGameplay2();
             }
+        }
+
+        private void FindSceneReferences()
+        {
+            if (playerTransform == null)
+            {
+                GameObject p = GameObject.FindGameObjectWithTag("Player");
+                if (p != null) playerTransform = p.transform;
+            }
+
+            if (checkpointTransform == null)
+            {
+                GameObject cp = GameObject.Find("Checkpoint");
+                if (cp != null) checkpointTransform = cp.transform;
+            }
+
+            if (bridgePlaceholder == null)
+            {
+                bridgePlaceholder = GameObject.Find("SM_Bridge");
+            }
+
+            if (wargaNPC == null)
+            {
+                Gameplay2NPC[] npcs = FindObjectsByType<Gameplay2NPC>(FindObjectsSortMode.None);
+                foreach (var npc in npcs)
+                {
+                    if (npc.npcType == NPCType.Warga) wargaNPC = npc;
+                    else if (npc.npcType == NPCType.Mahasiswa) mahasiswaNPC = npc;
+                }
+            }
+
+            if (boars.Count == 0) boars.AddRange(FindObjectsByType<Gameplay2Boar>(FindObjectsSortMode.None));
+            if (trees.Count == 0) trees.AddRange(FindObjectsByType<Gameplay2Tree>(FindObjectsSortMode.None));
         }
 
         private void Update()
@@ -77,17 +114,7 @@ namespace Jejak.Gameplay2
             Debug.Log("<color=green>[Gameplay 2] Dimulai: Gotong Royong dan Pelestarian!</color>");
             gameObject.SetActive(true);
 
-            if (playerTransform == null)
-            {
-                GameObject p = GameObject.FindGameObjectWithTag("Player");
-                if (p != null) playerTransform = p.transform;
-            }
-
-            if (checkpointTransform == null)
-            {
-                GameObject cp = GameObject.Find("Checkpoint");
-                if (cp != null) checkpointTransform = cp.transform;
-            }
+            FindSceneReferences();
 
             if (checkpointTransform != null && playerTransform != null)
             {
@@ -100,9 +127,6 @@ namespace Jejak.Gameplay2
                 Player.PlayerController pc = playerTransform.GetComponent<Player.PlayerController>();
                 if (pc != null) pc.ResetVelocity();
             }
-
-            if (boars.Count == 0) boars.AddRange(FindObjectsByType<Gameplay2Boar>(FindObjectsSortMode.None));
-            if (trees.Count == 0) trees.AddRange(FindObjectsByType<Gameplay2Tree>(FindObjectsSortMode.None));
 
             ResetToSafePeriod();
         }
@@ -150,7 +174,7 @@ namespace Jejak.Gameplay2
             currentPhase = G2Phase.InvasionPeriod;
             remainingTime = invasionDuration;
 
-            Debug.Log("<color=red>[Gameplay 2] INVASI BABI DIMULAI! (00:30)</color>");
+            Debug.Log("<color=red>[Gameplay 2] WAKTU AMAN HABIS! Babi hutan menyerbu Safe Zone!</color>");
 
             foreach (var b in boars)
             {
@@ -159,7 +183,7 @@ namespace Jejak.Gameplay2
 
             if (Gameplay2HUD.Instance != null)
             {
-                Gameplay2HUD.Instance.ShowBanner("PERINGATAN: INVASI BABI HUTAN (00:30)!\nLari dan berlindung di Checkpoint!", 5f);
+                Gameplay2HUD.Instance.ShowBanner("PERINGATAN INVASI (00:30)!\nBabi hutan masuk Safe Zone! Berlindung di Checkpoint!", 5f);
             }
 
             if (timerRoutine != null) StopCoroutine(timerRoutine);
@@ -183,12 +207,12 @@ namespace Jejak.Gameplay2
                 if (b != null)
                 {
                     b.StartInvasion();
-                    Debug.Log($"<color=red>[Babi Aggro] {b.gameObject.name} mulai menyerang target!</color>");
                 }
             }
 
             if (Gameplay2HUD.Instance != null)
             {
+                Gameplay2HUD.Instance.TriggerHitFlash();
                 Gameplay2HUD.Instance.ShowBanner("POHON TERLARANG DIPUKUL!\nSemua babi mengamuk seketika! Lari ke Checkpoint!", 5f);
             }
 
@@ -216,7 +240,7 @@ namespace Jejak.Gameplay2
 
         public void DamageMC(int damage)
         {
-            if (isPlayerInCheckpoint) return;
+            if (isPlayerInCheckpoint || isResetting) return;
 
             mcCurrentHP -= damage;
             Debug.Log($"<color=red>[Gameplay 2] MC terkena serudukan! HP: {mcCurrentHP}/{mcMaxHP}</color>");
@@ -228,12 +252,14 @@ namespace Jejak.Gameplay2
 
             if (mcCurrentHP <= 0)
             {
+                mcCurrentHP = 0;
                 StartCoroutine(MCDeathRoutine());
             }
         }
 
         private IEnumerator MCDeathRoutine()
         {
+            isResetting = true;
             Debug.Log("<color=red>[Gameplay 2] MC MATI! Reset seluruh babak Gameplay 2...</color>");
             if (Gameplay2HUD.Instance != null)
             {
@@ -265,6 +291,7 @@ namespace Jejak.Gameplay2
                 if (pc != null) pc.ResetVelocity();
             }
 
+            isResetting = false;
             ResetToSafePeriod();
         }
 
@@ -274,11 +301,12 @@ namespace Jejak.Gameplay2
             currentSeedlings += seedling;
             Debug.Log($"<color=yellow>[Gameplay 2] Balok: {currentWood}/{targetWood} | Bibit: {currentSeedlings}</color>");
 
-            if (currentWood >= targetWood && currentPhase != G2Phase.BridgeSubmission)
+            if (currentWood >= targetWood && currentPhase != G2Phase.BridgeSubmission && currentPhase != G2Phase.Finished)
             {
+                currentPhase = G2Phase.BridgeSubmission;
                 if (Gameplay2HUD.Instance != null)
                 {
-                    Gameplay2HUD.Instance.ShowBanner("100 Balok Terkumpul! Pergilah ke Checkpoint untuk memasang jembatan!", 4f);
+                    Gameplay2HUD.Instance.ShowBanner("100 Balok Terkumpul!\nPergilah ke Checkpoint dan tekan [E] untuk memasang jembatan!", 5f);
                 }
             }
         }
@@ -295,7 +323,39 @@ namespace Jejak.Gameplay2
 
             if (Gameplay2HUD.Instance != null)
             {
-                Gameplay2HUD.Instance.ShowBanner("GAMEPLAY 2 SELESAI!\nJembatan Berhasil Dibangun Bersama Warga & Mahasiswa!", 6f);
+                Gameplay2HUD.Instance.ShowBanner("GAMEPLAY 2 SELESAI!\nJembatan Berhasil Dibangun Bersama Warga & Mahasiswa!", 5f);
+            }
+
+            StartCoroutine(TransitionToGameplay3Routine());
+        }
+
+        private IEnumerator TransitionToGameplay3Routine()
+        {
+            yield return new WaitForSeconds(4.5f);
+
+            GameObject gp2Group = GameObject.Find("Gameplay2_Group");
+            GameObject gp3Group = GameObject.Find("Gameplay3_Group");
+
+            if (gp3Group != null)
+            {
+                if (gp2Group != null) gp2Group.SetActive(false);
+                gp3Group.SetActive(true);
+
+                var gp3Manager = gp3Group.GetComponentInChildren<Gameplay3Manager>();
+                if (gp3Manager != null)
+                {
+                    gp3Manager.StartGameplay3(currentSeedlings);
+                }
+            }
+            else
+            {
+                var gp3Manager = Object.FindFirstObjectByType<Gameplay3Manager>(FindObjectsInactive.Include);
+                if (gp3Manager != null)
+                {
+                    if (gp2Group != null) gp2Group.SetActive(false);
+                    gp3Manager.gameObject.SetActive(true);
+                    gp3Manager.StartGameplay3(currentSeedlings);
+                }
             }
         }
     }
